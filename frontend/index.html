@@ -3,58 +3,32 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Reservas deportivas</title>
+  <meta name="description" content="Sistema de gestión de reservas de escenarios deportivos">
+  <title>Reservas Deportivas</title>
   <link rel="stylesheet" href="/css/styles.css">
- <script src="/js/api.js" defer></script>
-<script src="/js/app.js" defer></script>
+  <script src="/js/api.js" defer></script>
+  <script src="/js/app.js" defer></script>
 </head>
 <body>
-  <header class="topbar">
-    <div><p class="eyebrow">CENTRO DEPORTIVO UNIVERSITARIO</p><h1>Reservas deportivas</h1></div>
-    <div id="session-area"><span id="session-label">No has iniciado sesión</span><button id="logout-button" class="secondary hidden">Cerrar sesión</button></div>
-  </header>
-  <main>
-    <section class="panel" id="login-panel">
-      <h2>Iniciar sesión</h2>
-      <p>Usa una cuenta ficticia de demostración incluida en el README.</p>
-      <form id="login-form">
-        <label>Correo electrónico<input name="email" type="email" required autocomplete="username" placeholder="estudiante@demo.edu"></label>
-        <label>Contraseña<input name="password" type="password" required autocomplete="current-password"></label>
-        <button type="submit">Ingresar</button>
-      </form>
+  <header class="topbar"><div><span class="brand-mark">RD</span><div><h1>Reservas Deportivas</h1><p>Gestión de escenarios y horarios</p></div></div><div id="session-area" hidden><span id="user-label"></span><button id="logout-button" class="button secondary">Cerrar sesión</button></div></header>
+  <main class="container">
+    <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+    <section id="login-view" class="panel login-panel">
+      <h2>Iniciar sesión</h2><p>Ingresa con las credenciales asignadas por el administrador.</p>
+      <form id="login-form"><label for="login-email">Correo electrónico</label><input id="login-email" name="email" type="email" autocomplete="username" required maxlength="254"><label for="login-password">Contraseña</label><input id="login-password" name="password" type="password" autocomplete="current-password" required maxlength="200"><button class="button primary" type="submit">Ingresar</button></form>
     </section>
-    <section id="app-panel" class="hidden">
-      <div class="intro"><div><p class="eyebrow">DISPONIBILIDAD</p><h2>Encuentra tu espacio</h2></div><p>Las reservas duran 60 minutos. Deben solicitarse entre 2 horas y 7 días antes.</p></div>
-      <section class="panel">
-        <h3>Escenarios disponibles</h3>
-        <div id="scenarios" class="scenario-grid"></div>
+    <section id="app-view" hidden>
+      <nav class="tabs" aria-label="Módulos"><button class="tab active" data-view="reservations">Reservas</button><button class="tab" data-view="scenarios" data-roles="admin">Escenarios</button><button class="tab" data-view="users" data-roles="admin">Usuarios</button><button class="tab" data-view="blocks" data-roles="admin,deportivo">Bloqueos</button><button class="tab" data-view="reports" data-roles="admin,deportivo">Reportes</button></nav>
+      <section class="view panel" id="view-reservations"><div class="section-heading"><div><h2>Reservas</h2><p>Consulta disponibilidad y administra tus reservas.</p></div><button class="button primary" id="refresh-reservations">Actualizar</button></div>
+        <form id="reservation-form" class="form-grid"><div><label for="reservation-scenario">Escenario</label><select id="reservation-scenario" required></select></div><div><label for="reservation-date">Fecha</label><input id="reservation-date" type="date" required></div><div class="form-action"><button class="button secondary" type="button" id="check-availability">Consultar franjas</button></div><div class="wide"><label for="reservation-slot">Franja disponible (60 minutos)</label><select id="reservation-slot" required><option value="">Primero consulta disponibilidad</option></select></div><div class="wide"><button class="button primary" type="submit">Crear reserva</button></div></form>
+        <h3>Listado de reservas</h3><div class="table-wrap"><table><thead><tr><th>Escenario</th><th>Usuario</th><th>Inicio</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="reservations-table"><tr><td colspan="5">Inicia sesión para consultar.</td></tr></tbody></table></div>
       </section>
-      <section class="panel">
-        <h3>Crear reserva</h3>
-        <form id="reservation-form" class="form-grid">
-          <label>Escenario<select name="scenarioId" id="scenario-select" required></select></label>
-          <label>Fecha y hora de inicio<input name="start" id="reservation-start" type="datetime-local" required></label>
-          <button type="submit">Confirmar reserva</button>
-        </form>
-        <p class="hint">El servidor vuelve a validar todos los datos. Elegir un horario en la pantalla no garantiza que siga disponible.</p>
-      </section>
-      <section class="panel">
-        <div class="section-heading"><h3>Mis reservas</h3><button id="refresh-button" class="secondary">Actualizar</button></div>
-        <div id="my-reservations" class="reservation-list"></div>
-      </section>
-      <section class="panel hidden" id="staff-panel">
-        <h3>Registro de uso deportivo</h3>
-        <p>Personal deportivo: registra una reserva como completada o inasistencia.</p>
-        <div id="staff-reservations" class="reservation-list"></div>
-      </section>
-      <section class="panel hidden" id="admin-panel">
-        <h3>Vista administrativa de escenarios</h3>
-        <p>Demostración de lectura de escenarios. La gestión completa de usuarios, horarios y bloqueos queda fuera del módulo implementado.</p>
-        <div id="admin-summary"></div>
-      </section>
+      <section class="view panel" id="view-scenarios" hidden><div class="section-heading"><div><h2>Escenarios deportivos</h2><p>Solo administradores pueden crear o modificar escenarios.</p></div></div><form id="scenario-form" class="form-grid"><div><label for="scenario-name">Nombre</label><input id="scenario-name" required maxlength="100"></div><div><label for="scenario-sport">Tipo de deporte</label><input id="scenario-sport" required maxlength="80"></div><div><label for="scenario-capacity">Capacidad</label><input id="scenario-capacity" type="number" min="1" max="10000" required></div><div><label for="scenario-location">Ubicación</label><input id="scenario-location" required maxlength="160"></div><div class="wide"><button class="button primary">Crear escenario</button></div></form><div id="scenarios-list" class="cards"></div></section>
+      <section class="view panel" id="view-users" hidden><h2>Usuarios</h2><form id="user-form" class="form-grid"><div><label for="user-name">Nombre</label><input id="user-name" required maxlength="100"></div><div><label for="user-email">Correo</label><input id="user-email" type="email" required maxlength="254"></div><div><label for="user-password">Contraseña temporal (mínimo 12 caracteres)</label><input id="user-password" type="password" minlength="12" required maxlength="200"></div><div><label for="user-role">Rol</label><select id="user-role"><option value="usuario">Usuario</option><option value="deportivo">Personal deportivo</option><option value="admin">Administrador</option></select></div><div class="wide"><button class="button primary">Crear usuario</button></div></form><div class="table-wrap"><table><thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Estado</th><th>Acción</th></tr></thead><tbody id="users-table"></tbody></table></div></section>
+      <section class="view panel" id="view-blocks" hidden><h2>Bloqueos de disponibilidad</h2><form id="block-form" class="form-grid"><div><label for="block-scenario">Escenario</label><select id="block-scenario" required></select></div><div><label for="block-start">Inicio</label><input id="block-start" type="datetime-local" required></div><div><label for="block-end">Fin</label><input id="block-end" type="datetime-local" required></div><div><label for="block-reason">Motivo</label><input id="block-reason" required maxlength="300"></div><div class="wide"><button class="button primary">Crear bloqueo</button></div></form><div id="blocks-list" class="cards"></div></section>
+      <section class="view panel" id="view-reports" hidden><h2>Reportes por periodo</h2><form id="report-form" class="form-grid"><div><label for="report-from">Desde</label><input id="report-from" type="date" required></div><div><label for="report-to">Hasta</label><input id="report-to" type="date" required></div><div class="form-action"><button class="button primary">Generar reporte</button></div></form><div class="table-wrap"><table><thead><tr><th>Escenario</th><th>Total</th><th>Reservadas</th><th>Canceladas</th><th>Completadas</th><th>Inasistencias</th></tr></thead><tbody id="reports-table"></tbody></table></div></section>
     </section>
-    <div id="message" role="status" aria-live="polite"></div>
   </main>
-  <footer>Proyecto académico · Datos ficticios · No usar para reservas reales</footer>
+  <footer>Reservas Deportivas · Proyecto académico</footer>
 </body>
 </html>

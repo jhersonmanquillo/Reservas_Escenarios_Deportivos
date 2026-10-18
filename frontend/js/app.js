@@ -1,152 +1,31 @@
-const $ = (selector) => document.querySelector(selector);
-let currentUser = null;
-let scenarios = [];
-
-function showMessage(message, isError = false) {
-  const box = $("#message");
-  box.replaceChildren();
-  const item = document.createElement("div");
-  item.className = `notice${isError ? " error" : ""}`;
-  item.textContent = message;
-  box.append(item);
-  window.setTimeout(() => { if (box.contains(item)) item.remove(); }, 5000);
-}
-function formatDate(value) {
-  return new Date(value).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" });
-}
-function safeText(tag, text, className) {
-  const node = document.createElement(tag);
-  node.textContent = text;
-  if (className) node.className = className;
-  return node;
-}
-async function loadScenarios() {
-  const result = await api("/api/scenarios");
-  scenarios = result.scenarios;
-  const grid = $("#scenarios");
-  const select = $("#scenario-select");
-  grid.replaceChildren();
-  select.replaceChildren();
-  scenarios.forEach((scenario) => {
-    const card = document.createElement("article");
-    card.className = "scenario-card";
-    card.append(safeText("h4", scenario.name));
-    card.append(safeText("p", `Deporte: ${scenario.sport}`));
-    card.append(safeText("p", `Ubicación: ${scenario.location}`));
-    card.append(safeText("p", `Capacidad: ${scenario.capacity} personas`));
-    card.append(safeText("span", scenario.active ? "Activo" : "Inactivo", "status"));
-    grid.append(card);
-    if (scenario.active) {
-      const option = document.createElement("option");
-      option.value = scenario.id;
-      option.textContent = scenario.name;
-      select.append(option);
-    }
-  });
-}
-async function loadReservations() {
-  const { reservations } = await api("/api/reservations/mine");
-  const list = $("#my-reservations");
-  list.replaceChildren();
-  if (!reservations.length) list.append(safeText("p", "Todavía no tienes reservas."));
-  reservations.forEach((reservation) => {
-    const scenario = scenarios.find((item) => item.id === reservation.scenarioId);
-    const card = document.createElement("article");
-    card.className = "reservation-card";
-    const info = document.createElement("div");
-    info.append(safeText("strong", scenario ? scenario.name : "Escenario"));
-    info.append(safeText("p", `${formatDate(reservation.start)} – ${formatDate(reservation.end)}`));
-    info.append(safeText("span", reservation.status, "status"));
-    if (reservation.cancellationReason) info.append(safeText("p", `Motivo: ${reservation.cancellationReason}`));
-    card.append(info);
-    if (reservation.status === "Reservada") {
-      const cancel = safeText("button", "Cancelar reserva", "secondary");
-      cancel.addEventListener("click", async () => {
-        const reason = window.prompt("Indica el motivo de la cancelación:");
-        if (!reason || !reason.trim()) return showMessage("Debes escribir un motivo para cancelar.", true);
-        try {
-          await api(`/api/reservations/${reservation.id}/cancel`, { method: "POST", body: JSON.stringify({ reason: reason.trim() }) });
-          showMessage("Reserva cancelada.");
-          await loadReservations();
-        } catch (error) { showMessage(error.message, true); }
-      });
-      card.append(cancel);
-    }
-    list.append(card);
-  });
-}
-async function loadStaffReservations() {
-  const { reservations } = await api("/api/staff/reservations");
-  const list = $("#staff-reservations");
-  list.replaceChildren();
-  reservations.forEach((reservation) => {
-    const card = document.createElement("article");
-    card.className = "reservation-card";
-    card.append(safeText("span", `${reservation.id} · ${reservation.status} · ${formatDate(reservation.start)}`));
-    if (reservation.status === "Reservada") {
-      ["Completada", "Inasistencia"].forEach((status) => {
-        const button = safeText("button", status);
-        button.addEventListener("click", async () => {
-          try {
-            await api(`/api/staff/reservations/${reservation.id}/status`, { method: "PATCH", body: JSON.stringify({ status }) });
-            showMessage("Estado actualizado.");
-            await loadStaffReservations();
-          } catch (error) { showMessage(error.message, true); }
-        });
-        card.append(button);
-      });
-    }
-    list.append(card);
-  });
-}
-async function showApp(user) {
-  currentUser = user;
-  $("#login-panel").classList.add("hidden");
-  $("#app-panel").classList.remove("hidden");
-  $("#logout-button").classList.remove("hidden");
-  $("#session-label").textContent = `${user.name} (${user.role})`;
-  $("#staff-panel").classList.toggle("hidden", !["personal", "admin"].includes(user.role));
-  $("#admin-panel").classList.toggle("hidden", user.role !== "admin");
-  await loadScenarios();
-  await loadReservations();
-  if (["personal", "admin"].includes(user.role)) await loadStaffReservations();
-  if (user.role === "admin") $("#admin-summary").textContent = `${scenarios.length} escenarios registrados.`;
-}
-$("#login-form").addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const form = new FormData(event.currentTarget);
-  try {
-    const result = await api("/api/auth/login", { method: "POST", body: JSON.stringify({ email: form.get("email"), password: form.get("password") }) });
-    showMessage("Sesión iniciada.");
-    await showApp(result.user);
-  } catch (error) { showMessage(error.message, true); }
-});
-$("#reservation-form").addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const form = new FormData(event.currentTarget);
-  try {
-    await api("/api/reservations", { method: "POST", body: JSON.stringify({ scenarioId: form.get("scenarioId"), start: new Date(form.get("start")).toISOString() }) });
-    showMessage("Reserva creada correctamente.");
-    event.currentTarget.reset();
-    await loadReservations();
-  } catch (error) { showMessage(error.message, true); }
-});
-$("#logout-button").addEventListener("click", async () => {
-  try { await api("/api/auth/logout", { method: "POST" }); } catch (_) {}
-  currentUser = null;
-  $("#login-panel").classList.remove("hidden");
-  $("#app-panel").classList.add("hidden");
-  $("#logout-button").classList.add("hidden");
-  $("#session-label").textContent = "No has iniciado sesión";
-  showMessage("Sesión cerrada.");
-});
-$("#refresh-button").addEventListener("click", async () => {
-  try { await loadScenarios(); await loadReservations(); showMessage("Información actualizada."); }
-  catch (error) { showMessage(error.message, true); }
-});
-(async function init() {
-  try {
-    const result = await api("/api/auth/me");
-    if (result.user) await showApp(result.user);
-  } catch (_) { /* Una sesión inexistente es normal al abrir la página. */ }
+(() => {
+  const $ = (id) => document.getElementById(id);
+  let currentUser = null;
+  let scenarios = [];
+  const weekdays = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+  function notify(message, type='success') { const el=$('notice');el.textContent=message;el.className=`notice ${type}`;el.hidden=false;window.scrollTo({top:0,behavior:'smooth'}); }
+  function escapeHtml(value) { return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  async function action(fn, successMessage) { try { const result=await fn(); if(successMessage)notify(successMessage); return result; } catch(e) { notify(e.message,'error'); return null; } }
+  function showApp() { $('login-view').hidden=true;$('app-view').hidden=false;$('session-area').hidden=false;$('user-label').textContent=`${currentUser.name} · ${currentUser.role}`;document.querySelectorAll('[data-roles]').forEach(el=>{el.hidden=!el.dataset.roles.split(',').includes(currentUser.role)});document.querySelectorAll('.tab').forEach(el=>el.classList.toggle('active',el.dataset.view==='reservations'));showView('reservations');loadBaseData(); }
+  function showLogin() { currentUser=null;$('login-view').hidden=false;$('app-view').hidden=true;$('session-area').hidden=true; }
+  function showView(name) { document.querySelectorAll('.view').forEach(v=>v.hidden=v.id!==`view-${name}`);document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.view===name));if(name==='reservations')loadReservations();if(name==='scenarios')loadScenarios();if(name==='users')loadUsers();if(name==='blocks')loadBlocks(); }
+  async function loadBaseData(){await Promise.all([loadScenarios(),loadReservations()]);}
+  async function loadScenarios(){const rows=await action(()=>api.get('/api/scenarios'));if(!rows)return;scenarios=rows;const options=rows.filter(s=>s.active).map(s=>`<option value="${s.id}">${escapeHtml(s.name)} · ${escapeHtml(s.sport_type)}</option>`).join('');$('reservation-scenario').innerHTML=options||'<option value="">No hay escenarios activos</option>';$('block-scenario').innerHTML=options||'<option value="">No hay escenarios activos</option>';if(currentUser?.role==='admin')$('scenarios-list').innerHTML=rows.map(s=>`<article class="mini-card"><h3>${escapeHtml(s.name)}</h3><p>${escapeHtml(s.sport_type)} · Capacidad ${s.capacity}</p><p>${escapeHtml(s.location)}</p><p>Estado: <strong>${s.active?'Activo':'Inactivo'}</strong></p><div class="inline-actions"><button class="button secondary" data-hours="${s.id}">Configurar horarios</button><button class="button ${s.active?'danger':'secondary'}" data-toggle-scenario="${s.id}" data-active="${s.active?0:1}">${s.active?'Desactivar':'Activar'}</button></div></article>`).join('')||'<p class="empty">No hay escenarios registrados.</p>'; }
+  async function loadReservations(){const rows=await action(()=>api.get('/api/reservations'));if(!rows)return;$('reservations-table').innerHTML=rows.map(r=>`<tr><td>${escapeHtml(r.scenario_name)}</td><td>${escapeHtml(r.user_name||currentUser.name)}</td><td>${escapeHtml(r.starts_at.replace('T',' '))}</td><td><span class="status ${escapeHtml(r.status)}">${escapeHtml(r.status)}</span></td><td><div class="inline-actions">${r.status==='Reservada'&&(currentUser.role==='admin'||r.user_id===currentUser.id)?`<button class="button danger" data-cancel="${r.id}">Cancelar</button>`:''}${r.status==='Reservada'&&['admin','deportivo'].includes(currentUser.role)?`<button class="button secondary" data-outcome="${r.id}" data-status="Completada">Completar</button><button class="button secondary" data-outcome="${r.id}" data-status="Inasistencia">Inasistencia</button>`:''}</div></td></tr>`).join('')||'<tr><td colspan="5" class="empty">No hay reservas para mostrar.</td></tr>'; }
+  async function loadUsers(){const rows=await action(()=>api.get('/api/users'));if(!rows)return;$('users-table').innerHTML=rows.map(u=>`<tr><td>${escapeHtml(u.name)}</td><td>${escapeHtml(u.email)}</td><td><select data-user-role="${u.id}"><option value="admin" ${u.role==='admin'?'selected':''}>Administrador</option><option value="usuario" ${u.role==='usuario'?'selected':''}>Usuario</option><option value="deportivo" ${u.role==='deportivo'?'selected':''}>Personal deportivo</option></select></td><td>${u.active?'Activo':'Inactivo'}</td><td><button class="button secondary" data-save-user="${u.id}" data-active="${u.active?0:1}">${u.active?'Desactivar':'Activar'}</button></td></tr>`).join('');}
+  async function loadBlocks(){const rows=await action(()=>api.get('/api/blocks'));if(!rows)return;$('blocks-list').innerHTML=rows.map(b=>`<article class="mini-card"><h3>${escapeHtml(b.scenario_name)}</h3><p>${escapeHtml(b.starts_at.replace('T',' '))} a ${escapeHtml(b.ends_at.replace('T',' '))}</p><p>${escapeHtml(b.reason)}</p></article>`).join('')||'<p class="empty">No hay bloqueos registrados.</p>';}
+  $('login-form').addEventListener('submit',async e=>{e.preventDefault();const result=await action(()=>api.post('/api/auth/login',{email:$('login-email').value,password:$('login-password').value}));if(result){currentUser=result.user;showApp();notify('Sesión iniciada.');}});
+  $('logout-button').addEventListener('click',async()=>{const r=await action(()=>api.post('/api/auth/logout',{}));if(r){showLogin();notify('Sesión cerrada.');}});
+  document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>showView(t.dataset.view)));
+  $('refresh-reservations').addEventListener('click',loadReservations);
+  $('check-availability').addEventListener('click',async()=>{const scenario=$('reservation-scenario').value,date=$('reservation-date').value;if(!scenario||!date)return notify('Selecciona un escenario y una fecha.','error');const result=await action(()=>api.get(`/api/scenarios/${scenario}/availability?date=${encodeURIComponent(date)}`));if(!result)return;const slots=result.slots.filter(s=>s.available);$('reservation-slot').innerHTML=slots.map(s=>`<option value="${s.starts_at}">${s.starts_at.slice(11)} - ${s.ends_at.slice(11)}</option>`).join('')||'<option value="">No hay franjas disponibles</option>';if(!slots.length)notify('No hay franjas disponibles para esa fecha.','error');});
+  $('reservation-form').addEventListener('submit',async e=>{e.preventDefault();const start=$('reservation-slot').value;if(!start)return notify('Consulta y selecciona una franja disponible.','error');const r=await action(()=>api.post('/api/reservations',{scenario_id:Number($('reservation-scenario').value),starts_at:start}),'Reserva creada.');if(r)loadReservations();});
+  $('scenario-form').addEventListener('submit',async e=>{e.preventDefault();const data={name:$('scenario-name').value,sport_type:$('scenario-sport').value,capacity:Number($('scenario-capacity').value),location:$('scenario-location').value};const r=await action(()=>api.post('/api/scenarios',data),'Escenario creado. Ahora configura sus horarios.');if(r){e.target.reset();loadScenarios();}});
+  $('scenarios-list').addEventListener('click',async e=>{const toggle=e.target.closest('[data-toggle-scenario]');if(toggle){const r=await action(()=>api.patch(`/api/scenarios/${toggle.dataset.toggleScenario}`,{active:Number(toggle.dataset.active)}),'Estado del escenario actualizado.');if(r)loadScenarios();return;}const hours=e.target.closest('[data-hours]');if(hours){const id=hours.dataset.hours;const days=prompt('Días a habilitar (0=domingo, 1=lunes, ... 6=sábado), separados por coma. Ejemplo: 1,2,3,4,5,6');if(days===null)return;const open=prompt('Hora de apertura en formato HH:mm','08:00');if(open===null)return;const close=prompt('Hora de cierre en formato HH:mm','22:00');if(close===null)return;const parsed=[...new Set(days.split(',').map(x=>Number(x.trim())))];if(parsed.some(x=>!Number.isInteger(x)||x<0||x>6)||!/^([01]\d|2[0-3]):[0-5]\d$/.test(open)||!/^([01]\d|2[0-3]):[0-5]\d$/.test(close)||open>=close)return notify('Días u horarios inválidos.','error');const r=await action(()=>api.put(`/api/scenarios/${id}/hours`,{hours:parsed.map(weekday=>({weekday,open_time:open,close_time:close}))}),'Horarios configurados.');if(r)notify(`Horarios guardados: ${parsed.map(d=>weekdays[d]).join(', ')}.`);}});
+  $('user-form').addEventListener('submit',async e=>{e.preventDefault();const r=await action(()=>api.post('/api/users',{name:$('user-name').value,email:$('user-email').value,password:$('user-password').value,role:$('user-role').value}),'Usuario creado.');if(r){e.target.reset();loadUsers();}});
+  $('users-table').addEventListener('click',async e=>{const b=e.target.closest('[data-save-user]');if(!b)return;const role=$(`unused-${b.dataset.saveUser}`);const selected=document.querySelector(`[data-user-role="${b.dataset.saveUser}"]`).value;const r=await action(()=>api.patch(`/api/users/${b.dataset.saveUser}`,{role:selected,active:Number(b.dataset.active)}),'Usuario actualizado.');if(r)loadUsers();});
+  $('block-form').addEventListener('submit',async e=>{e.preventDefault();const r=await action(()=>api.post('/api/blocks',{scenario_id:Number($('block-scenario').value),starts_at:$('block-start').value,ends_at:$('block-end').value,reason:$('block-reason').value}),'Bloqueo creado.');if(r){e.target.reset();loadBlocks();}});
+  $('report-form').addEventListener('submit',async e=>{e.preventDefault();const rows=await action(()=>api.get(`/api/reports/summary?from=${encodeURIComponent($('report-from').value)}&to=${encodeURIComponent($('report-to').value)}`));if(rows)$('reports-table').innerHTML=rows.scenarios.map(r=>`<tr><td>${escapeHtml(r.scenario_name)}</td><td>${r.total_reservations||0}</td><td>${r.active||0}</td><td>${r.cancelled||0}</td><td>${r.completed||0}</td><td>${r.no_shows||0}</td></tr>`).join('')||'<tr><td colspan="6">Sin datos para el periodo.</td></tr>';});
+  document.body.addEventListener('click',async e=>{const cancel=e.target.closest('[data-cancel]');if(cancel){const reason=prompt('Motivo de cancelación (obligatorio):');if(reason===null)return;const r=await action(()=>api.post(`/api/reservations/${cancel.dataset.cancel}/cancel`,{reason}),'Reserva cancelada.');if(r)loadReservations();return;}const outcome=e.target.closest('[data-outcome]');if(outcome){const note=prompt('Nota opcional del resultado:','');if(note===null)return;const r=await action(()=>api.post(`/api/reservations/${outcome.dataset.outcome}/outcome`,{status:outcome.dataset.status,note}),'Resultado registrado.');if(r)loadReservations();}});
+  api.get('/api/auth/me').then(data=>{currentUser=data.user;showApp();}).catch(()=>showLogin());
 })();

@@ -1,20 +1,26 @@
 {
   "name": "reservas-deportivas",
-  "version": "0.1.0",
-  "description": "Sistema académico de reservas de escenarios deportivos, con persistencia JSON local",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Sistema web para administrar escenarios y reservas deportivas",
   "main": "backend/src/server.js",
   "scripts": {
     "start": "node backend/src/server.js",
     "dev": "node --watch backend/src/server.js",
-    "test": "node --test backend/tests/*.test.js"
+    "test": "node --test backend/tests/*.test.js",
+    "init-admin": "node backend/src/seed-admin.js"
+  },
+  "engines": {
+    "node": ">=20"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^13.0.3",
+    "connect-sqlite3": "^0.9.15",
+    "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
     "express-session": "^1.18.1",
     "helmet": "^8.0.0"
-  },
-  "devDependencies": {
-    "supertest": "^7.0.0"
   }
 }
