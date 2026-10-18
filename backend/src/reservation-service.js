@@ -20,10 +20,7 @@ function overlaps(aStart, aEnd, bStart, bEnd) { return aStart < bEnd && bStart <
 function createReservation({ userId, scenarioId, startsAt }) {
   if (!Number.isInteger(Number(scenarioId)) || Number(scenarioId) <= 0) throw new AppError(400, 'Escenario inválido.');
   const start = parseDateTime(startsAt, 'La fecha de inicio');
-  const now = new Date();
-  const diff = start.getTime() - now.getTime();
-  if (diff < 2 * 60 * 60 * 1000) throw new AppError(400, 'La reserva debe solicitarse con al menos dos horas de anticipación.');
-  if (diff > 7 * 24 * 60 * 60 * 1000) throw new AppError(400, 'No se permiten reservas con más de siete días de anticipación.');
+  validateReservationTime(start);
   if (start.getMinutes() !== 0 || start.getSeconds() !== 0 || start.getMilliseconds() !== 0) throw new AppError(400, 'Las reservas deben iniciar en una franja exacta de hora.');
   const end = new Date(start.getTime() + 60 * 60 * 1000);
   const startIso = startsAt;
@@ -50,6 +47,32 @@ function createReservation({ userId, scenarioId, startsAt }) {
   });
   return create.immediate();
 }
+
+
+function validateReservationTime(start, now = new Date()) {
+  const diff = start.getTime() - now.getTime();
+
+  if (diff < 2 * 60 * 60 * 1000) {
+    throw new AppError(
+      400,
+      'La reserva debe solicitarse con al menos dos horas de anticipación.'
+    );
+  }
+
+  if (diff > 7 * 24 * 60 * 60 * 1000) {
+    throw new AppError(
+      400,
+      'No se permiten reservas con más de siete días de anticipación.'
+    );
+  }
+
+  return true;
+}
+
+
+
+
+
 function cancelReservation({ reservationId, userId, role, reason }) {
   if (typeof reason !== 'string' || reason.trim().length < 3 || reason.trim().length > 500) throw new AppError(400, 'Indica un motivo de cancelación de entre 3 y 500 caracteres.');
   const run = db.transaction(() => {
@@ -76,4 +99,13 @@ function recordOutcome({ reservationId, actorId, status, note }) {
   });
   return run.immediate();
 }
-module.exports = { AppError, createReservation, cancelReservation, recordOutcome, overlaps, parseDateTime, FINAL };
+module.exports = {
+  AppError,
+  createReservation,
+  cancelReservation,
+  recordOutcome,
+  overlaps,
+  parseDateTime,
+  validateReservationTime,
+  FINAL
+};
