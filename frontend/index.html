@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Reservas deportivas</title>
+  <link rel="stylesheet" href="/css/styles.css">
+ <script src="/js/api.js" defer></script>
+<script src="/js/app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <div><p class="eyebrow">CENTRO DEPORTIVO UNIVERSITARIO</p><h1>Reservas deportivas</h1></div>
+    <div id="session-area"><span id="session-label">No has iniciado sesión</span><button id="logout-button" class="secondary hidden">Cerrar sesión</button></div>
+  </header>
+  <main>
+    <section class="panel" id="login-panel">
+      <h2>Iniciar sesión</h2>
+      <p>Usa una cuenta ficticia de demostración incluida en el README.</p>
+      <form id="login-form">
+        <label>Correo electrónico<input name="email" type="email" required autocomplete="username" placeholder="estudiante@demo.edu"></label>
+        <label>Contraseña<input name="password" type="password" required autocomplete="current-password"></label>
+        <button type="submit">Ingresar</button>
+      </form>
+    </section>
+    <section id="app-panel" class="hidden">
+      <div class="intro"><div><p class="eyebrow">DISPONIBILIDAD</p><h2>Encuentra tu espacio</h2></div><p>Las reservas duran 60 minutos. Deben solicitarse entre 2 horas y 7 días antes.</p></div>
+      <section class="panel">
+        <h3>Escenarios disponibles</h3>
+        <div id="scenarios" class="scenario-grid"></div>
+      </section>
+      <section class="panel">
+        <h3>Crear reserva</h3>
+        <form id="reservation-form" class="form-grid">
+          <label>Escenario<select name="scenarioId" id="scenario-select" required></select></label>
+          <label>Fecha y hora de inicio<input name="start" id="reservation-start" type="datetime-local" required></label>
+          <button type="submit">Confirmar reserva</button>
+        </form>
+        <p class="hint">El servidor vuelve a validar todos los datos. Elegir un horario en la pantalla no garantiza que siga disponible.</p>
+      </section>
+      <section class="panel">
+        <div class="section-heading"><h3>Mis reservas</h3><button id="refresh-button" class="secondary">Actualizar</button></div>
+        <div id="my-reservations" class="reservation-list"></div>
+      </section>
+      <section class="panel hidden" id="staff-panel">
+        <h3>Registro de uso deportivo</h3>
+        <p>Personal deportivo: registra una reserva como completada o inasistencia.</p>
+        <div id="staff-reservations" class="reservation-list"></div>
+      </section>
+      <section class="panel hidden" id="admin-panel">
+        <h3>Vista administrativa de escenarios</h3>
+        <p>Demostración de lectura de escenarios. La gestión completa de usuarios, horarios y bloqueos queda fuera del módulo implementado.</p>
+        <div id="admin-summary"></div>
+      </section>
+    </section>
+    <div id="message" role="status" aria-live="polite"></div>
+  </main>
+  <footer>Proyecto académico · Datos ficticios · No usar para reservas reales</footer>
+</body>
+</html>

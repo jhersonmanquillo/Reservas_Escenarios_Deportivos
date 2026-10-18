@@ -1,0 +1,64 @@
+{
+  "users": [
+    {
+      "id": "u-admin",
+      "name": "Administración Demo",
+      "email": "admin@demo.edu",
+      "passwordHash": "$2a$10$wVJRLPWiv4o86CKjA5N9Ye.UPvdLIFDnee1M.nJrLdQF0ACwdP2BC",
+      "role": "admin",
+      "active": true
+    },
+    {
+      "id": "u-student",
+      "name": "Estudiante Demo",
+      "email": "estudiante@demo.edu",
+      "passwordHash": "$2a$10$mU64H6ETgZl/H8PbLEVh5uvNbpqlvyZ0IMrUsLDYjAd8udOwNCTiu",
+      "role": "usuario",
+      "active": true
+    },
+    {
+      "id": "u-staff",
+      "name": "Personal Deportivo Demo",
+      "email": "deportivo@demo.edu",
+      "passwordHash": "$2a$10$55tpIo78YS60uSlrlKIlmOWeZP.6jNw6w0yZyq3C5rI5GnBFjEgVm",
+      "role": "personal",
+      "active": true
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "e-001",
+      "name": "Cancha múltiple A",
+      "sport": "Baloncesto",
+      "capacity": 20,
+      "location": "Bloque deportivo",
+      "active": true
+    },
+    {
+      "id": "e-002",
+      "name": "Cancha de fútbol 5",
+      "sport": "Fútbol",
+      "capacity": 12,
+      "location": "Zona exterior norte",
+      "active": true
+    },
+    {
+      "id": "e-003",
+      "name": "Cancha de voleibol",
+      "sport": "Voleibol",
+      "capacity": 14,
+      "location": "Coliseo",
+      "active": true
+    },
+    {
+      "id": "e-004",
+      "name": "Cancha en mantenimiento",
+      "sport": "Tenis",
+      "capacity": 4,
+      "location": "Zona exterior sur",
+      "active": false
+    }
+  ],
+  "reservations": [],
+  "blocks": []
+}
